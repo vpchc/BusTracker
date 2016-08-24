@@ -52,8 +52,8 @@ $(document).ready(function(){
       $busEndTime = new Date($year, $month, $day, $hour, $min);  
       
       $compareStart = $busStartTime - $currentTime;
-      $compareEnd = $busEndTime - $currentTime;
-  
+      $compareEnd   = $busEndTime - $currentTime;
+    
     //Where the comparing happens
       if($compareEnd <= 1.8e6 & $compareEnd > 0){
         return 4;
@@ -70,6 +70,31 @@ $(document).ready(function(){
       }
   };
     
+  function busScheduleGrab($inc){ 
+    //Get main start/end times and flag from url and store them.
+    $.ajax({
+      async: false,
+      type: 'GET',
+      url: '/info/bus_web_schedule.html',
+      success: function(data) { 
+        var $busStartTxt   = '<div id="start' + $inc +'">';
+        var $busStartTemp  = data.split($busStartTxt);
+        var $busStartTemp2 = $busStartTemp[1].split('</div>');
+        $busStart          = $busStartTemp2[0];
+          
+        var $busEndTxt   = '<div id="end' + $inc +'">';
+        var $busEndTemp  = data.split($busEndTxt);
+        var $busEndTemp2 = $busEndTemp[1].split('</div>'); 
+        $busEnd          = $busEndTemp2[0];
+          
+        var $busFlagTxt = '<div id="flag' + $inc +'">';
+        var $flagTemp   = data.split($busFlagTxt);
+        var $flagTemp2  = $flagTemp[1].split('</div>');
+        $flag           = $flagTemp2[0];
+      }
+    });
+  }
+    
   var $today = 0;
   var $twoAreas = 0;
   var $tempChange = [ ];
@@ -77,61 +102,24 @@ $(document).ready(function(){
   var $busEnd = 0;
   var $flag = 0;
   var $status = 0;
+  var $inc = 1;
   
-  //Get main start/end times and flag from url and store them.
-  $.ajax({
-     async: false,
-     type: 'GET',
-     url: '/info/bus_web_schedule.html',
-     success: function(data) {
-      var $busStartTemp = data.split('<div id="mainstart">');
-      var $busStartTemp2 = $busStartTemp[1].split('</div>');
-      $busStart = $busStartTemp2[0];
-           
-      var $busEndTemp = data.split('<div id="mainend">');
-      var $busEndTemp2 = $busEndTemp[1].split('</div>');
-      $busEnd = $busEndTemp2[0];
-    
-      var $flagTemp = data.split('<div id="flag">');
-      var $flagTemp2 = $flagTemp[1].split('</div>');
-      $flag = $flagTemp2[0];
-     }
-  });
-  //Check the times for the first location and store the status.
-  $status = busTrackerTimeCheck($busStart, $busEnd, $flag);
-  //If the first location is closed, check the second location
-  if($status == 0 && $flag == 1){
-    //Get sub start/end times from url and store them.
-    $.ajax({
-      async: false,
-      type: 'GET',
-      url: '/info/bus_web_schedule.html',
-      success: function(data) {
-        var $busStartTemp = data.split('<div id="substart">');
-        var $busStartTemp2 = $busStartTemp[1].split('</div>');
-        $busStart = $busStartTemp2[0];
-
-        var $busEndTemp = data.split('<div id="subend">');
-        var $busEndTemp2 = $busEndTemp[1].split('</div>');
-        $busEnd = $busEndTemp2[0];
-
-        var $flagTemp = data.split('<div id="flag">');
-        var $flagTemp2 = $flagTemp[1].split('</div>');
-        $flag = $flagTemp2[0];
+  while(1){
+      busScheduleGrab($inc);
+      
+      //Check the times for the first location and store the status.
+      $status = busTrackerTimeCheck($busStart, $busEnd, $flag);
+      
+      //If it the current location is open or there are no other locations left
+      if($status == 1 || $flag == 0){
+          break;
       }
-    }); 
-    //Check the times for the second location and store the status.
-    $status = busTrackerTimeCheck($busStart, $busEnd, $flag);
-    //Display the sub-location
-    $( "#bus-location" ).load("/info/bus_web_schedule.html #sublocation");
-    //Display the sub-hours
-    $( "#bus-hours" ).load("/info/bus_web_schedule.html #subhours");
-  }else{
-    //Display the main-location
-    $( "#bus-location" ).load("/info/bus_web_schedule.html #mainlocation");
-    //Display the main-hours
-    $( "#bus-hours" ).load("/info/bus_web_schedule.html #mainhours");
+      $inc++;
   }
+  //Display the main-location
+  $( "#bus-location" ).load("/info/bus_web_schedule.html #location" + $inc);
+  //Display the main-hours
+  $( "#bus-hours" ).load("/info/bus_web_schedule.html #hours" + $inc);
   // Display the status
   if($status === 1){
     document.getElementById("bus-status").innerHTML = "Open";
